@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidTradeData() {
+      let requiredFields = ['pair', 'type', 'entryPrice', 'quantity', 'userId', 'createdAt', 'updatedAt'];
+      let data = request.resource.data;
+      
+      return data.keys().hasAll(requiredFields) &&
+             data.pair is string &&
+             (data.type == 'BUY' || data.type == 'SELL') &&
+             data.entryPrice is number && data.entryPrice > 0 &&
+             data.quantity is number && data.quantity > 0 &&
+             data.userId == request.auth.uid &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+    
+    function isValidUserPreferences() {
+      let data = request.resource.data;
+      return data.userId == request.auth.uid &&
+             (!('defaultQuantity' in data) || data.defaultQuantity is number) &&
+             (!('darkMode' in data) || data.darkMode is bool) &&
+             (!('notifications' in data) || data.notifications is map);
+    }
+    
+    // Rate limiting function
+    function notRateLimited(path) {
+      let recentWrites = firestore
+        .get(/databases/$(database)/documents/users/$(request.auth.uid)/writes/$(path))
+        .data.count;
+      return recentWrites == null || recentWrites < 100;
+    }
+
+    // User document rules
+    match /users/{userId} {
+      allow read: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId) && isEmailVerified();
+      allow update: if isAuthenticated() && isOwner(userId) && isEmailVerified();
+      allow delete: if false; // Prevent user deletion through client
+      
+      // User preferences
+      match /preferences/{document=**} {
+        allow read: if isAuthenticated() && isOwner(userId);
+        allow write: if isAuthenticated() && isOwner(userId) && isEmailVerified() && isValidUserPreferences();
+      }
+      
+      // Rate limiting collection
+      match /writes/{document=**} {
+        allow read: if isAuthenticated() && isOwner(userId);
+        allow write: if false; // Only writable through functions
+      }
+    }
+
+    // Trades collection rules
+    match /trades/{tradeId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isEmailVerified() && isValidTradeData() && notRateLimited('trades');
+      allow update: if isAuthenticated() && isEmailVerified() && isOwner(resource.data.userId) && isValidTradeData();
+      allow delete: if isAuthenticated() && isEmailVerified() && isOwner(resource.data.userId);
+    }
+
+    // Analytics collection rules
+    match /analytics/{document=**} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow write: if false; // Only writable through functions
+    }
+  }
+} 

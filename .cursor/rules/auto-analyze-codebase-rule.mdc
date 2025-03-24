@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Analyzing codebase
+
+Codebase Analysis Before Generation
+- Before generating a script, analyze the current implementation of the relevant feature.
+- Identify what is implemented and what is missing in the codebase.
+- Provide a detailed breakdown of related functions, classes, and dependencies.
+
+Highlight Missing Implementations
+- List missing functions, API endpoints, UI components, or database models.
+- If logic is incomplete, specify what needs to be added.
+
+Suggest Enhancements
+- If code improvements are possible, suggest refactoring or optimization strategies.
+- Highlight areas for better performance, readability, and maintainability.
+
+Justify Script Generation
+- Explain why the new script is needed based on gaps or inefficiencies in the current implementation.
+- Compare the old vs. new approach if applicable.
+
+Bug Detection & Documentation
+- If a bug is encountered, create a separate bug report file in the project directory.
+- The bug report file should include:
+- Bug Description: Explain the issue in detail.
+- Affected Files/Components: List impacted scripts, functions, or modules.
+- Error Messages & Logs: Include relevant console/log outputs.
+- Steps to Reproduce: Clearly describe how to replicate the issue.
+- Planned Fix: Outline your strategy to resolve the bug.
+- Status: Mark as Pending, In Progress, or Resolved based on progress.
+
+Provide Context with Each Script
+- Add comments and documentation explaining how the script integrates with existing code.
+- List any dependencies or setup steps required.

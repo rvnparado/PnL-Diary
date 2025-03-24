@@ -1,0 +1,42 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+
+# PNL DIARY – MAJOR FEATURES LIST
+
+Note: This application is strictly a trading journal/diary and not a trading platform. It does not execute trades or connect directly to exchanges for order placement.
+
+Trade Entry & Management (For Journaling Purposes Only)
+- Create a new trade entry with date, asset, and trade details
+- Edit or delete existing trade entries
+- Tag trades based on strategy or confidence level
+
+Dashboard & Trade Analytics (For Review, Not Live Trading)
+- View total profit and loss summary
+- Display win/loss ratio and average return per trade
+- Show equity curve for account growth
+
+Journaling & Notes
+- Write detailed notes for each trade
+- Upload chart screenshots for trade review
+- Maintain a general trading journal for reflections
+
+Filters & Search
+- Filter trade history by date range, asset, or strategy
+- Search trade history by ticker symbol or notes
+
+Settings & Customization
+- Define custom trade tags and strategies
+- Choose a default currency for PnL tracking
+
+Data Import & Export (For Personal Record-Keeping Only)
+- Import past trades via CSV file
+- Export trade logs in CSV or PDF format
+
+Notifications & Reminders
+- Receive daily or weekly email summaries of trade performance
+- Get push notifications to log new trades
+
