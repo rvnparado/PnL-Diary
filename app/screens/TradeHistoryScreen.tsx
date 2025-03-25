@@ -116,7 +116,21 @@ export default function TradeHistoryScreen() {
         return type === 'BUY' ? '#4caf50' : '#f44336';
     };
 
+    const calculatePnL = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
+        const multiplier = trade.type === 'BUY' ? 1 : -1;
+        return (trade.exitPrice - trade.entryPrice) * trade.quantity * multiplier;
+    };
+
+    const calculatePercentage = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
+        const pnl = calculatePnL(trade);
+        const investment = trade.entryPrice * trade.quantity;
+        return (pnl / investment) * 100;
+    };
+
     const formatPnL = (value: number) => {
+        if (isNaN(value)) return '$0.00';
         const absValue = Math.abs(value);
         if (Number.isInteger(absValue)) {
             return value < 0 ? `-$${absValue}` : `$${absValue}`;
@@ -255,7 +269,10 @@ export default function TradeHistoryScreen() {
             >
                 <ThemedView style={styles.header}>
                     <View style={styles.headerContent}>
-                        <ThemedText style={styles.title}>Trade History</ThemedText>
+                        <View>
+                            <ThemedText style={styles.title}>Trade History</ThemedText>
+                            <ThemedText style={styles.totalTrades}>Total trades: {trades.length}</ThemedText>
+                        </View>
                         <View style={styles.headerActions}>
                             <TouchableOpacity
                                 style={styles.headerButton}
@@ -311,9 +328,9 @@ export default function TradeHistoryScreen() {
                                         <ThemedText
                                             style={[
                                                 styles.tradePnLText,
-                                                { color: trade.profitLoss >= 0 ? '#4caf50' : '#f44336' }
+                                                { color: calculatePnL(trade) >= 0 ? '#4caf50' : '#f44336' }
                                             ]}>
-                                            {formatPnL(trade.profitLoss)}
+                                            {formatPnL(calculatePnL(trade))}
                                         </ThemedText>
                                     )}
                                 </View>
@@ -324,9 +341,9 @@ export default function TradeHistoryScreen() {
                                     {trade.status === 'CLOSED' && (
                                         <ThemedText style={[
                                             styles.tradePercentage,
-                                            { color: trade.profitLoss >= 0 ? '#4caf50' : '#f44336' }
+                                            { color: calculatePnL(trade) >= 0 ? '#4caf50' : '#f44336' }
                                         ]}>
-                                            {`${trade.profitLossPercentage >= 0 ? '+' : ''}${trade.profitLossPercentage.toFixed(2)}%`}
+                                            {`${calculatePercentage(trade) >= 0 ? '+' : ''}${calculatePercentage(trade).toFixed(2)}%`}
                                         </ThemedText>
                                     )}
                                 </View>
@@ -504,5 +521,10 @@ const styles = StyleSheet.create({
     },
     lastRow: {
         marginBottom: 0,
+    },
+    totalTrades: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
     },
 }); 

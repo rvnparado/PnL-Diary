@@ -33,38 +33,84 @@ export default function TradeDetailScreen() {
     }, [id]);
 
     const setupRealTimeUpdates = () => {
-        if (!id) return;
+        if (!id) {
+            console.error('No trade ID provided');
+            return;
+        }
 
-        RealTimeService.subscribeSingleTrade(
-            id as string,
-            (updatedTrade) => {
-                setTrade(updatedTrade);
-            },
-            (error) => {
-                console.error('Real-time update error:', error);
-                Alert.alert('Error', 'Failed to receive trade updates');
-            }
-        );
+        try {
+            RealTimeService.subscribeSingleTrade(
+                id as string,
+                (updatedTrade) => {
+                    if (!updatedTrade) {
+                        console.error('Received null trade data');
+                        return;
+                    }
+                    setTrade(updatedTrade);
+                },
+                (error) => {
+                    console.error('Real-time update error:', error);
+                    Alert.alert(
+                        'Update Error',
+                        'Failed to receive trade updates. Please refresh the screen.',
+                        [
+                            {
+                                text: 'Refresh',
+                                onPress: loadTrade
+                            },
+                            {
+                                text: 'Cancel',
+                                style: 'cancel'
+                            }
+                        ]
+                    );
+                }
+            );
+        } catch (error) {
+            console.error('Error setting up real-time updates:', error);
+        }
     };
 
     const loadTrade = async () => {
         try {
+            setLoading(true);
             if (!id) {
-                Alert.alert('Error', 'Trade ID not found');
-                return;
+                throw new Error('Trade ID not found');
             }
 
             const tradeData = await TradeService.getTrade(id as string);
+            if (!tradeData) {
+                throw new Error('Trade not found');
+            }
+
             setTrade(tradeData);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading trade:', error);
-            Alert.alert('Error', 'Failed to load trade details');
+            Alert.alert(
+                'Error',
+                error.message || 'Failed to load trade details',
+                [
+                    {
+                        text: 'Retry',
+                        onPress: loadTrade
+                    },
+                    {
+                        text: 'Go Back',
+                        onPress: () => router.back()
+                    }
+                ]
+            );
         } finally {
             setLoading(false);
         }
     };
 
     const handleEditPress = () => {
+        if (!trade) {
+            Alert.alert('Error', 'Trade not found');
+            return;
+        }
+
         Alert.alert(
             'Edit Trade',
             'Are you sure you want to edit this trade?',
@@ -85,6 +131,11 @@ export default function TradeDetailScreen() {
     };
 
     const handleDeletePress = () => {
+        if (!trade) {
+            Alert.alert('Error', 'Trade not found');
+            return;
+        }
+
         Alert.alert(
             'Delete Trade',
             'Are you sure you want to delete this trade? This action cannot be undone.',
@@ -99,7 +150,11 @@ export default function TradeDetailScreen() {
                     onPress: async () => {
                         try {
                             await TradeService.deleteTrade(trade.id);
-                            router.back();
+                            Alert.alert(
+                                'Success',
+                                'Trade deleted successfully',
+                                [{ text: 'OK', onPress: () => router.back() }]
+                            );
                         } catch (error) {
                             console.error('Error deleting trade:', error);
                             Alert.alert('Error', 'Failed to delete trade');
@@ -118,11 +173,26 @@ export default function TradeDetailScreen() {
         return type === 'BUY' ? '#4caf50' : '#f44336';
     };
 
+    const calculatePnL = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
+        const multiplier = trade.type === 'BUY' ? 1 : -1;
+        return (trade.exitPrice - trade.entryPrice) * trade.quantity * multiplier;
+    };
+
+    const calculatePercentage = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
+        const pnl = calculatePnL(trade);
+        const investment = trade.entryPrice * trade.quantity;
+        return (pnl / investment) * 100;
+    };
+
     const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(value);
+        if (isNaN(value)) return '$0.00';
+        const absValue = Math.abs(value);
+        if (Number.isInteger(absValue)) {
+            return value < 0 ? `-$${absValue}` : `$${absValue}`;
+        }
+        return value < 0 ? `-$${absValue.toFixed(2)}` : `$${absValue.toFixed(2)}`;
     };
 
     if (loading) {
@@ -224,12 +294,12 @@ export default function TradeDetailScreen() {
                                 <ThemedText style={styles.detailLabel}>Profit/Loss</ThemedText>
                                 <ThemedText style={[
                                     styles.detailValue,
-                                    { color: trade.profitLoss >= 0 ? '#4caf50' : '#f44336' }
+                                    { color: calculatePnL(trade) >= 0 ? '#4caf50' : '#f44336' }
                                 ]}>
-                                    {formatCurrency(trade.profitLoss)}
+                                    {formatCurrency(calculatePnL(trade))}
                                     {' '}
                                     <ThemedText style={styles.percentageText}>
-                                        ({trade.profitLossPercentage >= 0 ? '+' : ''}{trade.profitLossPercentage.toFixed(2)}%)
+                                        ({calculatePercentage(trade) >= 0 ? '+' : ''}{calculatePercentage(trade).toFixed(2)}%)
                                     </ThemedText>
                                 </ThemedText>
                             </View>

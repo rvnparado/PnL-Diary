@@ -89,8 +89,16 @@ export default function EditTradeScreen() {
                 RealTimeService.unsubscribe(`trade_${id}`);
             }
             backHandler.remove();
+            setTrade(null);
+            setHasUnsavedChanges(false);
         };
     }, [hasUnsavedChanges]);
+
+    useEffect(() => {
+        setTrade(null);
+        setHasUnsavedChanges(false);
+        loadTrade();
+    }, [id]);
 
     const setupRealTimeUpdates = () => {
         if (!id) return;

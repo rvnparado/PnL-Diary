@@ -53,6 +53,10 @@ class TradeService {
     }
 
     private static calculateProfitLoss(trade: Trade): { profitLoss: number; profitLossPercentage: number } {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') {
+            return { profitLoss: 0, profitLossPercentage: 0 };
+        }
+
         const isLong = trade.type === 'BUY';
         const profitLoss = isLong
             ? (trade.exitPrice - trade.entryPrice) * trade.quantity
@@ -61,7 +65,10 @@ class TradeService {
         const investment = trade.entryPrice * trade.quantity;
         const profitLossPercentage = (profitLoss / investment) * 100;
 
-        return { profitLoss, profitLossPercentage };
+        return {
+            profitLoss: Number(profitLoss.toFixed(2)),
+            profitLossPercentage: Number(profitLossPercentage.toFixed(2))
+        };
     }
 
     private static validateAndFormatTrade(trade: Partial<Trade>): Trade {

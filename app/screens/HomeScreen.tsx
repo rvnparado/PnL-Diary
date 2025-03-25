@@ -16,41 +16,79 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../config/firebase';
 import TradeService, { Trade } from '../lib/trades';
 import { format } from 'date-fns';
+import RealTimeService from '../lib/realtime';
+import HybridAnalytics from '../lib/analytics/hybrid';
+import { PerformanceMetrics } from '../lib/analytics';
 
 export default function HomeScreen() {
     const router = useRouter();
     const [showExportModal, setShowExportModal] = useState(false);
-    const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+    const [trades, setTrades] = useState<Trade[]>([]);
+    const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        loadRecentTrades();
+        loadData();
+        setupRealTimeUpdates();
+
+        return () => {
+            const userId = auth.currentUser?.uid;
+            if (userId) {
+                RealTimeService.unsubscribe(`trades_${userId}`);
+            }
+        };
     }, []);
 
-    const loadRecentTrades = async () => {
+    const loadData = async () => {
         try {
             setLoading(true);
             const userId = auth.currentUser?.uid;
             if (!userId) {
-                console.error('No user logged in');
                 return;
             }
 
-            const trades = await TradeService.getUserTrades(userId);
-            setRecentTrades(trades.slice(0, 3)); // Get only the 3 most recent trades
+            const userTrades = await TradeService.getUserTrades(userId);
+            const sortedTrades = userTrades.sort((a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            setTrades(sortedTrades);
+
+            const performanceMetrics = await HybridAnalytics.getMetrics(userId, true);
+            setMetrics(performanceMetrics);
         } catch (error) {
-            console.error('Error loading recent trades:', error);
-            Alert.alert('Error', 'Failed to load recent trades');
+            Alert.alert('Error', 'Failed to load data');
         } finally {
             setLoading(false);
         }
     };
 
+    const setupRealTimeUpdates = () => {
+        const userId = auth.currentUser?.uid;
+        if (!userId) return;
+
+        RealTimeService.subscribeUserTrades(
+            userId,
+            async (updatedTrades) => {
+                const sortedTrades = updatedTrades.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+                setTrades(sortedTrades);
+
+                await HybridAnalytics.onTradeUpdate(userId);
+                const performanceMetrics = await HybridAnalytics.getMetrics(userId);
+                setMetrics(performanceMetrics);
+            },
+            (error) => {
+                Alert.alert('Error', 'Failed to receive trade updates');
+            }
+        );
+    };
+
     const onRefresh = React.useCallback(async () => {
         setRefreshing(true);
         try {
-            await loadRecentTrades();
+            await loadData();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to refresh data');
         } finally {
             setRefreshing(false);
         }
@@ -65,23 +103,26 @@ export default function HomeScreen() {
     };
 
     const calculatePnL = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
         const multiplier = trade.type === 'BUY' ? 1 : -1;
-        return (trade.exitPrice - trade.entryPrice) * trade.quantity * multiplier;
-    };
-
-    const formatPnL = (pnl: number) => {
-        // If the number is a whole number, don't show decimals
-        if (Number.isInteger(pnl)) {
-            return `${pnl >= 0 ? '+' : ''}${pnl}$`;
-        }
-        // Otherwise, show 2 decimal places
-        return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$`;
+        const pnl = (trade.exitPrice - trade.entryPrice) * trade.quantity * multiplier;
+        return Number(pnl.toFixed(2));
     };
 
     const calculatePercentage = (trade: Trade) => {
+        if (!trade.exitPrice || trade.status !== 'CLOSED') return 0;
         const pnl = calculatePnL(trade);
         const investment = trade.entryPrice * trade.quantity;
-        return (pnl / investment) * 100;
+        return Number((pnl / investment * 100).toFixed(2));
+    };
+
+    const formatPnL = (pnl: number) => {
+        if (isNaN(pnl)) return '$0.00';
+        const absValue = Math.abs(pnl);
+        if (Number.isInteger(absValue)) {
+            return pnl < 0 ? `-$${absValue}` : `$${absValue}`;
+        }
+        return pnl < 0 ? `-$${absValue.toFixed(2)}` : `$${absValue.toFixed(2)}`;
     };
 
     const handleExport = (format: 'CSV' | 'JSON') => {
@@ -93,6 +134,10 @@ export default function HomeScreen() {
         );
     };
 
+    const showMetricInfo = (title: string, content: string) => {
+        Alert.alert(title, content);
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top', 'right', 'left']}>
             <ScrollView
@@ -101,8 +146,8 @@ export default function HomeScreen() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#2196F3']} // Android
-                        tintColor="#2196F3" // iOS
+                        colors={['#2196F3']}
+                        tintColor="#2196F3"
                     />
                 }
             >
@@ -115,22 +160,74 @@ export default function HomeScreen() {
                 <View style={styles.content}>
                     {/* Performance Summary Section */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.sectionTitle}>Performance Summary</ThemedText>
+                        <ThemedText style={styles.sectionTitle}>
+                            Performance Summary
+                            {metrics?.isDefaultData && (
+                                <ThemedText style={styles.defaultDataBadge}> (Sample Data)</ThemedText>
+                            )}
+                        </ThemedText>
                         <View style={styles.performanceGrid}>
                             <View style={styles.performanceItem}>
-                                <ThemedText style={styles.performanceValue}>85%</ThemedText>
+                                <View style={styles.metricHeader}>
+                                    <ThemedText style={styles.performanceValue}>
+                                        {metrics ? `${(metrics.winRate || 0).toFixed(1)}%` : '-'}
+                                    </ThemedText>
+                                    <TouchableOpacity
+                                        onPress={() => showMetricInfo(
+                                            'Win Rate Calculation',
+                                            `Win Rate = (Number of Winning Trades / Total Closed Trades) × 100\n\nCurrent Values:\nWinning Trades: ${metrics?.winningTrades || 0}\nLosing Trades: ${metrics?.losingTrades || 0}\nTotal Closed Trades: ${(metrics?.winningTrades || 0) + (metrics?.losingTrades || 0)}\nOpen Trades: ${(metrics?.totalTrades || 0) - ((metrics?.winningTrades || 0) + (metrics?.losingTrades || 0))}\n\nCalculation: (${metrics?.winningTrades || 0} / ${(metrics?.winningTrades || 0) + (metrics?.losingTrades || 0)}) × 100 = ${(metrics?.winRate || 0).toFixed(1)}%\n\nNote: Only CLOSED trades with valid exit prices are counted. Trades might be filtered out if:\n- Status is not 'CLOSED'\n- Exit price is missing or 0\n- Trade dates are outside the calculation period`
+                                        )}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
+                                    </TouchableOpacity>
+                                </View>
                                 <ThemedText style={styles.performanceLabel}>Win Rate</ThemedText>
                             </View>
                             <View style={styles.performanceItem}>
-                                <ThemedText style={styles.performanceValue}>$2,450</ThemedText>
-                                <ThemedText style={styles.performanceLabel}>Total Profit</ThemedText>
+                                <View style={styles.metricHeader}>
+                                    <ThemedText style={[
+                                        styles.performanceValue,
+                                        { color: (metrics?.totalPnL || 0) >= 0 ? '#4caf50' : '#f44336' }
+                                    ]}>
+                                        {metrics ? formatPnL(metrics.totalPnL || 0) : '-'}
+                                    </ThemedText>
+                                    <TouchableOpacity
+                                        onPress={() => showMetricInfo(
+                                            'Total P&L Calculation',
+                                            `Total P&L = Sum of all closed trades' P&L\n\nFor each trade:\nLong (BUY): P&L = (Exit Price - Entry Price) × Quantity\nShort (SELL): P&L = (Entry Price - Exit Price) × Quantity\n\nCurrent Values:\nTotal P&L: ${formatPnL(metrics?.totalPnL || 0)}\nWinning Trades Total: ${formatPnL(metrics?.averageWinSize || 0)}\nLosing Trades Total: ${formatPnL(Math.abs(metrics?.averageLossSize || 0))}\nLargest Win: ${formatPnL(metrics?.largestWin || 0)}\nLargest Loss: ${formatPnL(Math.abs(metrics?.largestLoss || 0))}\n\nNote: P&L is only calculated for CLOSED trades with:\n- Valid entry and exit prices\n- Positive quantity\n- Status marked as 'CLOSED'`
+                                        )}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
+                                    </TouchableOpacity>
+                                </View>
+                                <ThemedText style={styles.performanceLabel}>Total P&L</ThemedText>
                             </View>
                             <View style={styles.performanceItem}>
-                                <ThemedText style={styles.performanceValue}>42</ThemedText>
+                                <View style={styles.metricHeader}>
+                                    <ThemedText style={styles.performanceValue}>
+                                        {metrics ? metrics.totalTrades : '-'}
+                                    </ThemedText>
+                                    <TouchableOpacity
+                                        onPress={() => showMetricInfo(
+                                            'Total Trades Count',
+                                            `Total Trades = All trades (both open and closed)\n\nCurrent Values:\nTotal Trades: ${metrics?.totalTrades || 0}\nOpen Trades: ${(metrics?.totalTrades || 0) - ((metrics?.winningTrades || 0) + (metrics?.losingTrades || 0))}\nClosed Trades: ${(metrics?.winningTrades || 0) + (metrics?.losingTrades || 0)}\n- Winning: ${metrics?.winningTrades || 0}\n- Losing: ${metrics?.losingTrades || 0}\n\nNote: A trade is considered:\nOpen if:\n- Status is 'OPEN'\n- No exit price set\nClosed if:\n- Status is 'CLOSED'\n- Has valid exit price`
+                                        )}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
+                                    </TouchableOpacity>
+                                </View>
                                 <ThemedText style={styles.performanceLabel}>Total Trades</ThemedText>
                             </View>
                             <View style={styles.performanceItem}>
-                                <ThemedText style={styles.performanceValue}>2.5</ThemedText>
+                                <View style={styles.metricHeader}>
+                                    <ThemedText style={styles.performanceValue}>
+                                        {metrics ? (metrics.profitFactor || 0).toFixed(2) : '-'}
+                                    </ThemedText>
+                                    <TouchableOpacity
+                                        onPress={() => showMetricInfo(
+                                            'Profit Factor Calculation',
+                                            `Profit Factor = Total Winning Amount / |Total Losing Amount|\n\nCurrent Values:\nTotal Winning Amount: ${formatPnL(metrics?.averageWinSize || 0)}\nTotal Losing Amount: ${formatPnL(Math.abs(metrics?.averageLossSize || 0))}\nAverage Win: ${formatPnL((metrics?.averageWinSize || 0) / (metrics?.winningTrades || 1))}\nAverage Loss: ${formatPnL(Math.abs((metrics?.averageLossSize || 0) / (metrics?.losingTrades || 1)))}\n\nCalculation: ${formatPnL(metrics?.averageWinSize || 0)} / ${formatPnL(Math.abs(metrics?.averageLossSize || 0))} = ${(metrics?.profitFactor || 0).toFixed(2)}\n\nNote: Only considers closed trades with:\n- Valid P&L values\n- Status marked as 'CLOSED'\nHigher values indicate better risk-adjusted returns`
+                                        )}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
+                                    </TouchableOpacity>
+                                </View>
                                 <ThemedText style={styles.performanceLabel}>Profit Factor</ThemedText>
                             </View>
                         </View>
@@ -145,7 +242,7 @@ export default function HomeScreen() {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.tradesList}>
-                            {recentTrades.map((trade) => (
+                            {trades.slice(0, 3).map((trade) => (
                                 <TouchableOpacity
                                     key={trade.id}
                                     style={[
@@ -196,7 +293,7 @@ export default function HomeScreen() {
                                     </View>
                                 </TouchableOpacity>
                             ))}
-                            {recentTrades.length === 0 && !loading && (
+                            {trades.length === 0 && !loading && (
                                 <ThemedText style={styles.noTradesText}>No recent trades found</ThemedText>
                             )}
                         </View>
@@ -480,5 +577,15 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         marginTop: 16,
+    },
+    defaultDataBadge: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic'
+    },
+    metricHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
 });
