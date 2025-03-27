@@ -9,13 +9,30 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rvnparado.pnldiary",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch",
+          "fetch"
+        ],
+        "NSPhotoLibraryUsageDescription": "PnL Diary needs access to your photo library to allow you to upload chart screenshots for your trades."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.rvnparado.pnldiary",
+      "versionCode": 1,
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +53,24 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "56d9be23-c7ca-4947-a4a5-031f6f826e92"
+      }
+    },
+    "owner": "rvnparado",
+    "privacy": "unlisted",
+    "primaryColor": "#2196F3",
+    "description": "A trading journal app for tracking and analyzing your trades and trading performance.",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/56d9be23-c7ca-4947-a4a5-031f6f826e92"
     }
   }
 }

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import AuthService from '../lib/auth';
+import RealTimeService from '../lib/realtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
@@ -121,6 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signOut = async () => {
         try {
             setLoading(true);
+
+            // Unsubscribe from all Firestore listeners before logging out
+            RealTimeService.unsubscribeAll();
+
             await AuthService.signOut();
         } finally {
             setLoading(false);

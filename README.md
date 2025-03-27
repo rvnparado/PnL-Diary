@@ -1,50 +1,137 @@
-# Welcome to your Expo app 👋
+# PnL Diary - Trading Journal Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A comprehensive mobile trading journal application built with React Native and Expo that helps traders track, analyze, and improve their trading performance.
 
-## Get started
+## Features
 
-1. Install dependencies
+### Authentication & Security
+- Firebase-based authentication with email/password
+- Email verification requirement
+- Secure password reset functionality
+- Firebase secure rules implementation
 
+### Trade Entry & Management
+- Create detailed trade entries with asset, entry/exit prices, quantities
+- Edit and update trade details
+- Close trades with profit/loss calculations
+- Tag trades with strategies and indicators
+- Add notes and identify mistakes for learning
+
+### Analytics & Performance Tracking
+- View comprehensive performance metrics:
+  - Win rate percentage
+  - Total profit/loss
+  - Average trade profit/loss
+  - Best and worst trades
+  - Profit factor
+
+### Journal & Notes
+- Add detailed notes to each trade
+- Track reasons for entry and exit
+- Document trade strategy and indicators used
+- Identify mistakes for continuous improvement
+
+### Offline Capability
+- Cache trades for offline viewing
+- Queue operations for sync when back online
+
+## Getting Started
+
+### Prerequisites
+- Node.js 16 or higher
+- Expo CLI (`npm install -g expo-cli`)
+- Firebase account (for authentication and database)
+
+### Installation
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/rvnparado/PnL-Diary.git
+   cd PnL-Diary
+   ```
+
+2. Install dependencies
    ```bash
    npm install
    ```
 
-2. Start the app
+3. Set up Firebase
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Enable Authentication (Email/Password)
+   - Create Firestore Database
+   - Add your Firebase configuration to .env file
 
-   ```bash
-    npx expo start
+4. Create a .env file in the project root with your Firebase configuration
+   ```
+   EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
+   EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
+   EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
    ```
 
-In the output, you'll find options to open the app in a
+5. Start the development server
+   ```bash
+   npm start
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Build for Production
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### Android
 ```bash
-npm run reset-project
+expo build:android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### iOS
+```bash
+expo build:ios
+```
 
-## Learn more
+## Tech Stack
 
-To learn more about developing your project with Expo, look at the following resources:
+- **Frontend**: React Native, Expo, Expo Router
+- **State Management**: React Context API
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Authentication
+- **Styling**: StyleSheet (React Native)
+- **Charts**: react-native-chart-kit
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project Structure
 
-## Join the community
+- `app/` - Main application code
+  - `(auth)/` - Authentication routes
+  - `(tabs)/` - Tab navigator routes
+  - `screens/` - Screen components
+  - `components/` - Reusable UI components
+  - `lib/` - Utilities and services
+  - `config/` - Configuration files
+  - `contexts/` - React context providers
 
-Join our community of developers creating universal apps.
+## Roadmap
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [ ] CSV/PDF export functionality
+- [ ] Add more advanced chart types
+- [ ] Social sharing of trade results
+- [ ] Trade image attachment capability
+- [ ] Performance analytics improvements
+- [ ] Push notifications for trade reminders
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Acknowledgments
+
+- React Native community
+- Expo team
+- Firebase team

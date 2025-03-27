@@ -4,8 +4,20 @@ globs:
 alwaysApply: true
 ---
 
-
 # PNL DIARY – MAJOR FEATURES LIST
+
+Repository Information:
+- GitHub Repository: https://github.com/rvnparado/PnL-Diary
+- Branch Strategy: Main branch for production, feature branches for development
+
+Firebase Configuration:
+- Using Firebase Web SDK (firebase@10.7.1) throughout the application
+- No mixing of different Firebase SDK versions or types (e.g., no @react-native-firebase/*)
+- Consistent configuration for Expo managed workflow compatibility
+- Services Used:
+  - Authentication
+  - Firestore Database
+  - Analytics (if needed)
 
 Note: This application is strictly a trading journal/diary and not a trading platform. It does not execute trades or connect directly to exchanges for order placement.
 

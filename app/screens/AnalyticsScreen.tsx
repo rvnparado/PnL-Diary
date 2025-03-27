@@ -11,26 +11,8 @@ import ThemedView from '../components/ThemedView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../config/firebase';
 import TradeService from '../lib/trades';
-
-interface PerformanceMetrics {
-    totalTrades: number;
-    winRate: number;
-    totalProfit: number;
-    averageProfit: number;
-    bestTrade: number;
-    worstTrade: number;
-    profitFactor: number;
-}
-
-const mockMetrics: PerformanceMetrics = {
-    totalTrades: 150,
-    winRate: 65,
-    totalProfit: 12500,
-    averageProfit: 83.33,
-    bestTrade: 1200,
-    worstTrade: -500,
-    profitFactor: 2.1,
-};
+import HybridAnalytics from '../lib/analytics/hybrid';
+import { PerformanceMetrics } from '../lib/analytics';
 
 export default function AnalyticsScreen() {
     const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
@@ -50,9 +32,8 @@ export default function AnalyticsScreen() {
                 return;
             }
 
-            // TODO: Replace with actual analytics service call
-            // const data = await AnalyticsService.getMetrics(userId);
-            setMetrics(mockMetrics);
+            const data = await HybridAnalytics.getMetrics(userId);
+            setMetrics(data);
         } catch (error) {
             console.error('Error loading analytics:', error);
             Alert.alert('Error', 'Failed to load analytics');
@@ -92,19 +73,19 @@ export default function AnalyticsScreen() {
                         <ThemedText style={styles.sectionTitle}>Performance Overview</ThemedText>
                         <View style={styles.metricsGrid}>
                             <View style={styles.metricItem}>
-                                <ThemedText style={styles.metricValue}>{mockMetrics.totalTrades}</ThemedText>
+                                <ThemedText style={styles.metricValue}>{metrics?.totalTrades || 0}</ThemedText>
                                 <ThemedText style={styles.metricLabel}>Total Trades</ThemedText>
                             </View>
                             <View style={styles.metricItem}>
-                                <ThemedText style={styles.metricValue}>{mockMetrics.winRate}%</ThemedText>
+                                <ThemedText style={styles.metricValue}>{metrics?.winRate ? `${metrics.winRate.toFixed(1)}%` : '0%'}</ThemedText>
                                 <ThemedText style={styles.metricLabel}>Win Rate</ThemedText>
                             </View>
                             <View style={styles.metricItem}>
-                                <ThemedText style={styles.metricValue}>${mockMetrics.totalProfit}</ThemedText>
+                                <ThemedText style={styles.metricValue}>${metrics?.totalPnL?.toFixed(2) || '0.00'}</ThemedText>
                                 <ThemedText style={styles.metricLabel}>Total Profit</ThemedText>
                             </View>
                             <View style={styles.metricItem}>
-                                <ThemedText style={styles.metricValue}>${mockMetrics.averageProfit}</ThemedText>
+                                <ThemedText style={styles.metricValue}>${metrics?.averagePnL?.toFixed(2) || '0.00'}</ThemedText>
                                 <ThemedText style={styles.metricLabel}>Avg. Profit</ThemedText>
                             </View>
                         </View>
@@ -115,13 +96,13 @@ export default function AnalyticsScreen() {
                         <View style={styles.tradeMetrics}>
                             <View style={styles.tradeMetricItem}>
                                 <ThemedText style={[styles.tradeMetricValue, { color: '#4CAF50' }]}>
-                                    +${mockMetrics.bestTrade}
+                                    +${metrics?.largestWin?.toFixed(2) || '0.00'}
                                 </ThemedText>
                                 <ThemedText style={styles.tradeMetricLabel}>Best Trade</ThemedText>
                             </View>
                             <View style={styles.tradeMetricItem}>
                                 <ThemedText style={[styles.tradeMetricValue, { color: '#F44336' }]}>
-                                    -${Math.abs(mockMetrics.worstTrade)}
+                                    -${Math.abs(metrics?.largestLoss || 0).toFixed(2)}
                                 </ThemedText>
                                 <ThemedText style={styles.tradeMetricLabel}>Worst Trade</ThemedText>
                             </View>
@@ -133,8 +114,15 @@ export default function AnalyticsScreen() {
                         <View style={styles.additionalMetrics}>
                             <View style={styles.metricRow}>
                                 <ThemedText style={styles.metricLabel}>Profit Factor</ThemedText>
-                                <ThemedText style={styles.metricValue}>{mockMetrics.profitFactor}</ThemedText>
+                                <ThemedText style={styles.metricValue}>{metrics?.profitFactor?.toFixed(2) || '0.00'}</ThemedText>
                             </View>
+                            {metrics?.isDefaultData && (
+                                <View style={styles.metricRow}>
+                                    <ThemedText style={[styles.metricLabel, styles.defaultDataWarning]}>
+                                        * Using sample data until you have more trades
+                                    </ThemedText>
+                                </View>
+                            )}
                         </View>
                     </ThemedView>
                 </View>
@@ -205,28 +193,32 @@ const styles = StyleSheet.create({
     },
     tradeMetricItem: {
         width: '48%',
-        padding: 12,
+        padding: 16,
         backgroundColor: '#f5f5f5',
         borderRadius: 8,
         alignItems: 'center',
     },
     tradeMetricValue: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 4,
     },
     tradeMetricLabel: {
-        fontSize: 12,
+        fontSize: 14,
         color: '#666',
     },
     additionalMetrics: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        padding: 12,
+        marginTop: 8,
     },
     metricRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
     },
+    defaultDataWarning: {
+        color: '#FFA000',
+        fontStyle: 'italic',
+    }
 }); 

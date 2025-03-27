@@ -19,9 +19,11 @@ import { format } from 'date-fns';
 import RealTimeService from '../lib/realtime';
 import HybridAnalytics from '../lib/analytics/hybrid';
 import { PerformanceMetrics } from '../lib/analytics';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HomeScreen() {
     const router = useRouter();
+    const { user } = useAuth();
     const [showExportModal, setShowExportModal] = useState(false);
     const [trades, setTrades] = useState<Trade[]>([]);
     const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
@@ -29,16 +31,20 @@ export default function HomeScreen() {
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        loadData();
-        setupRealTimeUpdates();
+        if (user) {
+            loadData();
+            setupRealTimeUpdates();
+        } else {
+            // Clear data when user is not logged in
+            setTrades([]);
+            setMetrics(null);
+        }
 
         return () => {
-            const userId = auth.currentUser?.uid;
-            if (userId) {
-                RealTimeService.unsubscribe(`trades_${userId}`);
-            }
+            // Clean up any active subscriptions
+            RealTimeService.unsubscribeAll();
         };
-    }, []);
+    }, [user]);
 
     const loadData = async () => {
         try {
@@ -67,20 +73,28 @@ export default function HomeScreen() {
         const userId = auth.currentUser?.uid;
         if (!userId) return;
 
-        RealTimeService.subscribeUserTrades(
-            userId,
-            async (updatedTrades) => {
-                const sortedTrades = updatedTrades.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-                setTrades(sortedTrades);
+        try {
+            RealTimeService.subscribeUserTrades(
+                userId,
+                async (updatedTrades) => {
+                    const sortedTrades = updatedTrades.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+                    setTrades(sortedTrades);
 
-                await HybridAnalytics.onTradeUpdate(userId);
-                const performanceMetrics = await HybridAnalytics.getMetrics(userId);
-                setMetrics(performanceMetrics);
-            },
-            (error) => {
-                Alert.alert('Error', 'Failed to receive trade updates');
-            }
-        );
+                    await HybridAnalytics.onTradeUpdate(userId);
+                    const performanceMetrics = await HybridAnalytics.getMetrics(userId);
+                    setMetrics(performanceMetrics);
+                },
+                (error) => {
+                    console.error('Error in trade updates subscription:', error);
+                    // Don't show alert for auth-related errors as user might have logged out
+                    if (!error.message.includes('permission') && !error.message.includes('auth')) {
+                        Alert.alert('Error', 'Failed to receive trade updates');
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('Error setting up real-time updates:', error);
+        }
     };
 
     const onRefresh = React.useCallback(async () => {
