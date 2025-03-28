@@ -1,9 +1,9 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, getDoc, Timestamp, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy, getDoc, Timestamp, runTransaction, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import ValidationService from './validation';
 import ErrorService from './errors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NetworkInfo } from '@react-native-community/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 
 export type TradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED' | 'PENDING';
 export type TradeType = 'BUY' | 'SELL';
@@ -108,7 +108,7 @@ class TradeService {
         };
     }
 
-    private static formatTradeFromFirestore(data: any, id: string): Trade {
+    static formatTradeFromFirestore(data: any, id: string): Trade {
         return {
             ...data,
             id,
@@ -441,22 +441,33 @@ class TradeService {
 
     static async getTradesByStatus(userId: string, status: TradeStatus): Promise<Trade[]> {
         try {
-            const tradesQuery = query(
+            const q = query(
                 collection(db, this.COLLECTION),
                 where('userId', '==', userId),
-                where('status', '==', status),
-                orderBy('createdAt', 'desc')
+                where('status', '==', status)
             );
-
-            const querySnapshot = await getDocs(tradesQuery);
-            return querySnapshot.docs.map(doc =>
-                this.formatTradeFromFirestore(doc.data(), doc.id)
-            );
-        } catch (error: any) {
-            console.error('Error getting trades by status:', error);
+            const querySnapshot = await getDocs(q);
+            return querySnapshot.docs.map(doc => this.formatTradeFromFirestore(doc.data(), doc.id));
+        } catch (error) {
             throw ErrorService.getErrorMessage(error);
         }
     }
+
+    static subscribeToTradeUpdates(userId: string, callback: () => void) {
+        const q = query(
+            collection(db, this.COLLECTION),
+            where('userId', '==', userId)
+        );
+
+        return onSnapshot(q, (snapshot) => {
+            if (snapshot.docChanges().length > 0) {
+                callback();
+            }
+        }, (error) => {
+            console.error('Error in trade subscription:', error);
+        });
+    }
 }
 
+// Export both the class and the types
 export default TradeService; 

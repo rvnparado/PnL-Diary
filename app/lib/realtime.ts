@@ -1,6 +1,6 @@
 import { collection, doc, onSnapshot, query, where, Unsubscribe } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Trade } from './trades';
+import type { Trade } from './trades';
 import TradeService from './trades';
 import { auth } from '../config/firebase';
 
@@ -34,7 +34,7 @@ class RealTimeService {
                 tradeRef,
                 (snapshot) => {
                     if (snapshot.exists()) {
-                        const trade = TradeService['formatTradeFromFirestore'](snapshot.data(), snapshot.id);
+                        const trade = TradeService.formatTradeFromFirestore(snapshot.data(), snapshot.id);
                         onUpdate(trade);
                     }
                 },
@@ -75,7 +75,7 @@ class RealTimeService {
                 tradesQuery,
                 (snapshot) => {
                     const trades = snapshot.docs.map(doc =>
-                        TradeService['formatTradeFromFirestore'](doc.data(), doc.id)
+                        TradeService.formatTradeFromFirestore(doc.data(), doc.id)
                     );
                     onUpdate(trades);
                 },
@@ -117,7 +117,7 @@ class RealTimeService {
                 tradesQuery,
                 (snapshot) => {
                     const trades = snapshot.docs.map(doc =>
-                        TradeService['formatTradeFromFirestore'](doc.data(), doc.id)
+                        TradeService.formatTradeFromFirestore(doc.data(), doc.id)
                     );
                     onUpdate(trades);
                 },

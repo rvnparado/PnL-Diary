@@ -11,7 +11,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import ThemedText from '../components/ThemedText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import TradeService, { Trade, TradeType, TradeStatus } from '../lib/trades';
+import type { Trade, TradeType, TradeStatus } from '../lib/trades';
+import TradeService from '../lib/trades';
 import { format } from 'date-fns';
 import RealTimeService from '../lib/realtime';
 

@@ -16,7 +16,8 @@ import CustomDropdown from '../components/CustomDropdown';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../config/firebase';
-import TradeService, { Trade, NewTrade, TradeType, TradeStatus, TradeResult } from '../lib/trades';
+import type { Trade, NewTrade, TradeType, TradeStatus, TradeResult } from '../lib/trades';
+import TradeService from '../lib/trades';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 

@@ -66,9 +66,7 @@
     "privacy": "unlisted",
     "primaryColor": "#2196F3",
     "description": "A trading journal app for tracking and analyzing your trades and trading performance.",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/56d9be23-c7ca-4947-a4a5-031f6f826e92"
     }

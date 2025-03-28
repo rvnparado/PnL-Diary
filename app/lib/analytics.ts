@@ -1,7 +1,7 @@
 import { collection, query, where, getDocs, addDoc, orderBy, limit, QueryConstraint } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Trade as BaseTradeType } from './trades';
-import TradeService from './trades';
+import { TradeService } from './trades';
 import { calculatePnL } from './pnl';
 
 export type Trade = BaseTradeType & {
